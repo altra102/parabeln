@@ -1395,7 +1395,7 @@ PAGES.forEach((P,i)=>{
   s.innerHTML=`<h2 class="ptitle"><span class="num">${P.num}</span><span class="u">${P.t}</span></h2>
     ${P.extra?'<p class="extra box acht"><b class="t">Zusatz</b><span>Dieses Thema steht nicht auf den Buchseiten zur Scheitelpunktform. Frag deine Lehrkraft, ob es in der Arbeit drankommt – sonst zuerst die Seiten 0 bis 6 und die Probearbeit üben.</span></p>':''}
     ${P.video?'<div class="vid"></div>':''}${spick}${howHtml}<div class="tl"></div>
-    <div class="gamebox"><h3 class="hh">Bonus: 3D-Parcours</h3><p class="hint2">Renn durch die richtige Tür, bleib auf der richtigen Kachel, spring auf der richtigen Parabel. Steuerung: Pfeiltasten oder WASD, springen mit der Leertaste.</p><div class="g3host"></div></div>
+    <div class="gamebox"><h3 class="hh">Bonus: 3D-Parcours</h3><p class="hint2">Renn durch die richtige Tür, tritt auf die richtige Kachel, spring auf der richtigen Parabel. Steuerung: Pfeiltasten oder WASD, springen mit der Leertaste.</p><div class="g3host"></div></div>
     <div class="p-nav"><button class="btn prv">◀ ${i>0?PAGES[i-1].t:'Inhalt'}</button>${i<PAGES.length-1?`<button class="btn nxp">${PAGES[i+1].t} ▶</button>`:'<button class="btn nxp">Zum Inhalt</button>'}</div>`;
   app.append(s);
   if(P.video)P.player=new Player(s.querySelector('.vid'),P.video);
@@ -1612,7 +1612,9 @@ function startParcours(host,page){
     const t=new THREE.CanvasTexture(c);t.magFilter=t.minFilter=THREE.NearestFilter;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.repeat.set(1,1/0.72);stripeM=new THREE.MeshLambertMaterial({map:t});}
     const hh=y1-y0,m=new THREE.Mesh(boxGeo(0.36,hh,0.36),stripeM);m.position.set(x,y0+hh/2,z);m.castShadow=true;scene.add(m);return m;}
   function signAt(text,w,h,x,y,z,graph){const lab=graph?graphLabel(graph):label(text,{w:1024,h:Math.round(1024*h/w),bg:'#ffffff',bd:'#ff7eb0'});const m=plane(lab,w,h,x,y,z);
-    const p1=post(x-w/2+0.3,z-0.05,-0.5,y-h/2+0.2),p2=post(x+w/2-0.3,z-0.05,-0.5,y-h/2+0.2);fader(z,[m,p1,p2]);return {lab,m};}
+    /* Pfosten außerhalb der Strecke (x = ±6,6), damit sie keine Tür, Kachel oder Sprungfeld verdecken */
+    const px=6.6,top=y+h/2-0.3,p1=post(x-px,z-0.05,-4.2,top),p2=post(x+px,z-0.05,-4.2,top);foam(x-px,z,1.2);foam(x+px,z,1.2);
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(2*px,0.3,0.3),new THREE.MeshLambertMaterial({color:'#ff8fb8'}));bar.position.set(x,top-0.2,z-0.15);bar.castShadow=true;scene.add(bar);fader(z,[m,p1,p2,bar]);return {lab,m};}
   function segDoors(z0,Q){const S={type:'doors',Q,z0,z1:z0-16,res:null,ck:new THREE.Vector3(0,0,z0-1.5)};slab(-6,6,z0,S.z1,nextFloor());
     const zw=z0-9,N=Q.opts.length,slot=12/N,pw=slot-0.7;
     const wall=[];for(let i=0;i<=N;i++){const x=-6+slot*i,w=(i===0||i===N)?0.35:0.7,cx=i===0?x+0.175:i===N?x-0.175:x;wall.push(vbox(w,3.4,0.5,cx,1.7,zw,'#fff3e8'),vbox(w+0.12,0.3,0.62,cx,3.55,zw,'#ff8fb8'));col(cx-w/2,0,zw-0.25,cx+w/2,3.4,zw+0.25);}
@@ -1621,23 +1623,29 @@ function startParcours(host,page){
       const c=col(cx-pw/2,0,zw-0.15,cx+pw/2,2.8,zw+0.15,{hit(ax){if(ax!=='z')return;
         if(i===Q.ans){c.on=false;m.visible=false;lp.visible=false;m.userData.gone=lp.userData.gone=true;debris(m.position,hex,26);shake(0.25);if(S.res===null){S.res='ok';good();}}
         else{P.vel.z=9;P.vel.y=5;P.knock=0.35;hs=0.07;shake(0.4);if(!c.wrong){c.wrong=true;m.material=cloneM(vmats('#ff5d6c'));lab.draw('✗ '+o,{bg:'#ffe1e1',fg:'#b42318',bd:'#b42318'});}if(S.res===null){S.res='fail';bad(Q);}}}});});
-    fader(zw,wall);const sg=signAt(Q.q,11,Q.graph?5.5:2.8,0,Q.graph?6.6:5.1,zw+0.3,Q.graph?Q:null);S.enter=()=>showQ(Q);return S;}
-  function segTiles(z0,Q){const S={type:'tiles',Q,z0,res:null,ph:'idle',t:0},N=Q.opts.length,slot=12/N,tw=slot-0.3,td=3.6,zc=z0-3.35-td/2,zx=zc-td/2-0.35;S.ck=new THREE.Vector3(0,0,z0-1.5);
+    fader(zw,wall);const sg=signAt(Q.q,Q.graph?11:12.4,Q.graph?5.5:2.8,0,Q.graph?6.6:5.1,zw+0.3,Q.graph?Q:null);S.enter=()=>showQ(Q);return S;}
+  /* Kachel-Fall: Betreten löst sofort aus – richtige Kachel wird grün, falsche wackelt kurz und fällt */
+  function segTiles(z0,Q){const S={type:'tiles',Q,z0,res:null,ph:'idle'},N=Q.opts.length,slot=12/N,tw=slot-0.3,td=5.2,zc=z0-3.35-td/2,zx=zc-td/2-0.35;S.ck=new THREE.Vector3(0,0,z0-1.5);
     {const fcol=nextFloor();slab(-6,6,z0,z0-3,fcol);S.z1=zx-4;slab(-6,6,zx,S.z1,fcol);}S.tiles=[];
-    Q.opts.forEach((o,i)=>{const cx=-6+slot*(i+0.5),hex=pal[i%pal.length],m=vbox(tw,1,td,cx,-0.5,zc,hex),lab=label(o,{w:512,h:Math.round(512*td/tw)}),lp=plane(lab,tw*0.9,td*0.9,cx,0.02,zc,true);
-      m.userData.dyn=true;S.tiles.push({m,lp,lab,c:col(cx-tw/2,-1,zc-td/2,cx+tw/2,0,zc+td/2),vy:0,o,hex});});
-    if(Q.graph)signAt('',8,4,0,6.4,zx-2,Q);else signAt(Q.q,9,2.6,0,5.2,zx-2);
-    S.enter=()=>{showQ(Q);S.ph='count';S.t=12;};
-    S.update=dt=>{if(S.ph==='count'){S.t-=dt;hudT.textContent=`⏱ ${Math.ceil(S.t)}`;if(S.t<=0){S.ph='shake';S.t=0.7;hudT.textContent='';
-        const onRight=P.gr&&P.gc===S.tiles[Q.ans].c;S.res=onRight?'ok':'fail';onRight?good():bad(Q,'Du standest nicht auf der richtigen Kachel.');}}
-      else if(S.ph==='shake'){S.t-=dt;S.tiles.forEach((T,i)=>{if(i!==Q.ans)T.m.position.x+=Math.sin(performance.now()/25)*0.03;});if(S.t<=0){S.ph='fall';S.tiles.forEach((T,i)=>{if(i!==Q.ans)T.c.on=false;else{T.m.material=vmats('#5be08a');}});}}
-      else if(S.ph==='fall'){S.tiles.forEach((T,i)=>{if(i===Q.ans)return;T.vy-=20*dt;T.m.position.y+=T.vy*dt;T.lp.position.y+=T.vy*dt;});}};
+    Q.opts.forEach((o,i)=>{const cx=-6+slot*(i+0.5),hex=pal[i%pal.length],m=vbox(tw,1,td,cx,-0.5,zc,hex),lab=label(o,{w:512,h:Math.round(512*Math.min(2,td/tw))}),lp=plane(lab,tw*0.9,Math.min(td*0.9,tw*0.9*2),cx,0.02,zc,true);
+      m.userData.dyn=true;S.tiles.push({m,lp,lab,c:col(cx-tw/2,-1,zc-td/2,cx+tw/2,0,zc+td/2),vy:0,o,hex,x0:cx,shk:0,fall:false});});
+    if(Q.graph)signAt('',8,4,0,6.4,zx-2,Q);else signAt(Q.q,12,2.6,0,5.2,zx-2);
+    const drop=T=>{if(T.shk>0||T.fall||!T.c.on)return;T.shk=0.2;};
+    function trig(i){const T=S.tiles[i];
+      if(i===Q.ans){S.ph='done';T.m.material=cloneM(vmats('#5be08a'));S.tiles.forEach((U,j)=>{if(j!==i)drop(U);});shake(0.2);if(S.res===null){S.res='ok';good();}}
+      else{drop(T);shake(0.3);if(S.res===null){S.res='fail';bad(Q);}}}
+    S.enter=()=>{showQ(Q,false,'Tritt auf die Kachel mit der richtigen Antwort.');S.ph='wait';};
+    S.update=dt=>{
+      if(S.ph==='wait'&&P.gr&&P.gc){const i=S.tiles.findIndex(T=>T.c===P.gc&&T.c.on&&T.shk<=0);if(i>=0)trig(i);}
+      if(S.ph==='wait'&&S.res===null&&P.gr&&P.pos.z<zx-0.4){S.res='fail';S.ph='done';bad(Q,'Du musst auf eine Kachel treten.');S.tiles.forEach((U,j)=>{if(j!==Q.ans)drop(U);});}
+      for(const T of S.tiles){if(T.shk>0){T.shk-=dt;T.m.position.x=T.x0+Math.sin(elapsed*60)*0.06;T.lp.position.x=T.m.position.x;if(T.shk<=0){T.c.on=false;T.fall=true;T.m.position.x=T.lp.position.x=T.x0;}}
+        if(T.fall&&T.m.position.y>-30){T.vy-=22*dt;T.m.position.y+=T.vy*dt;T.lp.position.y+=T.vy*dt;}}};
     return S;}
   function segJump(z0,J){const S={type:'jump',Q:J,z0,res:null,fly:null},sx=2,sy=0.75,zp=z0-3.2,xs=[-4,0,4];S.ck=new THREE.Vector3(0,0,z0-1);
     slab(-6,6,z0,z0-5,nextFloor());S.pads=J.pads.map((p,i)=>{const lab=label(`${'ABC'[i]}: ${J.opts[i]}`,{w:640,h:640});const m=vbox(2.6,0.06,2.6,xs[i],0.03,zp,pal[i]);plane(lab,2.4,2.4,xs[i],0.07,zp,true);return {x:xs[i],p,zl:zp-2*p.d*sx};});
     const zC=Math.min(...S.pads.map(q=>q.zl))-3.5;
     S.isl=S.pads.map((q,i)=>{const s=slab(q.x-1.3,q.x+1.3,q.zl+1.3,q.zl-1.3,'#ffe7a8');const wk=slab(q.x-0.7,q.x+0.7,q.zl-1.3,zC,'#ffe7a8');s.m.userData.dyn=s.b.userData.dyn=true;return {s,wk};});
-    S.z1=zC;signAt(J.q,10,2.4,0,5,z0-0.4);
+    S.z1=zC;signAt(J.q,12,2.4,0,5,z0-0.4);
     S.enter=()=>showQ(J,true);
     S.update=dt=>{if(!S.fly&&P.gr&&!P.lock&&P.pos.z<z0-1.8&&P.pos.z>z0-4.6){const i=S.pads.findIndex(q=>Math.abs(P.pos.x-q.x)<1.3&&Math.abs(P.pos.z-zp)<1.3);
         if(i>=0){S.fly={i,u:0};P.lock=true;fovP=Math.min(10,fovP+6);squash(1.15);}}
@@ -1655,7 +1663,7 @@ function startParcours(host,page){
   function confetti(){for(let k=0;k<60;k++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2),new THREE.MeshBasicMaterial({color:pick(pal)}));m.position.copy(P.pos).y+=2;scene.add(m);parts.push({m,v:new THREE.Vector3((Math.random()-0.5)*10,Math.random()*10+4,(Math.random()-0.5)*10),l:2.5});}}
   /* HUD */
   let score=0,wrong=0,cur=-1,done=false,t0=performance.now(),toastT=0;const results=[];
-  function showQ(Q,isJump){qEl.innerHTML=`<b>Frage ${cur+1}/${segs.length}:</b> ${Q.q}${isJump?'<br><small>Lauf auf das Sprungfeld mit der richtigen Bahn.</small>':''}`;qEl.classList.add('on');}
+  function showQ(Q,isJump,extra){qEl.innerHTML=`<b>Frage ${cur+1}/${segs.length}:</b> ${Q.q}${isJump?'<br><small>Lauf auf das Sprungfeld mit der richtigen Bahn.</small>':extra?`<br><small>${extra}</small>`:''}`;qEl.classList.add('on');}
   function toast(h,cls){toastEl.innerHTML=h;toastEl.className='g3-toast on '+cls;toastT=cls==='bad'?5:2;}
   function good(){score++;results.push({ok:true});toast('✓ Richtig!','ok');confetti();upd();}
   function bad(Q,pre){wrong++;results.push({ok:false,Q});toast(`✗ ${pre?pre+' ':''}Richtig wäre: <b>${Q.opts[Q.ans]}</b><br><small>${Q.why}</small>`,'bad');upd();}
