@@ -1621,7 +1621,7 @@ function startParcours(host,page){
   function signAt(text,w,h,x,y,z,graph){const lab=graph?graphLabel(graph):label(text,{w:1024,h:Math.round(1024*h/w),bg:'#ffffff',bd:'#ff7eb0'});const m=plane(lab,w,h,x,y,z);
     /* Pfosten außerhalb der Strecke (x = ±6,6), damit sie keine Tür, Kachel oder Sprungfeld verdecken */
     const px=6.6,top=y+h/2-0.3,p1=post(x-px,z-0.05,-4.2,top),p2=post(x+px,z-0.05,-4.2,top);foam(x-px,z,1.2);foam(x+px,z,1.2);
-    const bar=new THREE.Mesh(new THREE.BoxGeometry(2*px,0.3,0.3),new THREE.MeshLambertMaterial({color:'#ff8fb8'}));bar.position.set(x,top-0.2,z-0.15);bar.castShadow=true;scene.add(bar);fader(z,[m,p1,p2,bar]);return {lab,m};}
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(2*px,0.3,0.3),new THREE.MeshLambertMaterial({color:'#ff8fb8'}));bar.position.set(x,top-0.2,z-0.25);bar.castShadow=true;scene.add(bar);fader(z,[m,p1,p2,bar]);return {lab,m};}
   function segDoors(z0,Q){const S={type:'doors',Q,z0,z1:z0-16,res:null,ck:new THREE.Vector3(0,0,z0-1.5)};slab(-6,6,z0,S.z1,nextFloor());
     const zw=z0-9,N=Q.opts.length,slot=12/N,pw=slot-0.7;
     const wall=[];for(let i=0;i<=N;i++){const x=-6+slot*i,w=(i===0||i===N)?0.35:0.7,cx=i===0?x+0.175:i===N?x-0.175:x;wall.push(vbox(w,3.4,0.5,cx,1.7,zw,'#fff3e8'),vbox(w+0.12,0.3,0.62,cx,3.55,zw,'#ff8fb8'));col(cx-w/2,0,zw-0.25,cx+w/2,3.4,zw+0.25);}
