@@ -213,6 +213,13 @@ details.spick li{margin:4px 0}
 .g3-toast.ok{background:#15803d;color:#fff;font-size:1.5rem;font-weight:700}
 .g3-toast.bad{background:#fffdf2;color:#b42318;border:3px solid #b42318}
 .g3-help{position:absolute;bottom:10px;left:12px;background:rgba(0,0,0,.45);color:#fff;border-radius:10px;padding:3px 10px;font-size:.85rem;z-index:2}
+.g3{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.g3-stick,.g3-jump{display:none}
+.g3.touch .g3-stick{display:block;position:absolute;left:24px;bottom:24px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.35);border:3px solid rgba(255,255,255,.85);z-index:3}
+.g3-stick i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.g3.touch .g3-jump{display:block;position:absolute;right:28px;bottom:28px;width:96px;height:96px;border-radius:50%;border:0;background:rgba(255,143,184,.92);color:#fff;font-size:2.4rem;font-weight:800;z-index:3;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.g3-jump.on{transform:scale(.9)}
+.g3.touch .g3-help{left:50%;transform:translateX(-50%)}
 .g3-over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(20,26,46,.45);z-index:4}
 .g3-over.on{display:flex}
 .g3-card{background:#fffdf2;border:3px solid #1e3a8a;border-radius:20px;padding:16px 24px;max-width:min(580px,90%);max-height:88%;overflow:auto;font-family:var(--hand);color:#1e3a8a;text-align:center}
@@ -1395,7 +1402,7 @@ PAGES.forEach((P,i)=>{
   s.innerHTML=`<h2 class="ptitle"><span class="num">${P.num}</span><span class="u">${P.t}</span></h2>
     ${P.extra?'<p class="extra box acht"><b class="t">Zusatz</b><span>Dieses Thema steht nicht auf den Buchseiten zur Scheitelpunktform. Frag deine Lehrkraft, ob es in der Arbeit drankommt – sonst zuerst die Seiten 0 bis 6 und die Probearbeit üben.</span></p>':''}
     ${P.video?'<div class="vid"></div>':''}${spick}${howHtml}<div class="tl"></div>
-    <div class="gamebox"><h3 class="hh">Bonus: 3D-Parcours</h3><p class="hint2">Renn durch die richtige Tür, tritt auf die richtige Kachel, spring auf der richtigen Parabel. Steuerung: Pfeiltasten oder WASD, springen mit der Leertaste.</p><div class="g3host"></div></div>
+    <div class="gamebox"><h3 class="hh">Bonus: 3D-Parcours</h3><p class="hint2">Renn durch die richtige Tür, tritt auf die richtige Kachel, spring auf der richtigen Parabel. Steuerung: Pfeiltasten oder WASD, springen mit der Leertaste. Auf dem iPad: Joystick links, Sprungtaste rechts.</p><div class="g3host"></div></div>
     <div class="p-nav"><button class="btn prv">◀ ${i>0?PAGES[i-1].t:'Inhalt'}</button>${i<PAGES.length-1?`<button class="btn nxp">${PAGES[i+1].t} ▶</button>`:'<button class="btn nxp">Zum Inhalt</button>'}</div>`;
   app.append(s);
   if(P.video)P.player=new Player(s.querySelector('.vid'),P.video);
@@ -1483,7 +1490,7 @@ function startParcours(host,page){
   stopParcours();
   const THREE_=window.THREE;if(!THREE_){host.innerHTML='<p>3D wird von diesem Browser nicht unterstützt.</p>';return;}
   host.innerHTML=`<div class="g3"><div class="g3-hud"><span class="g3-prog"></span><span class="g3-sc"></span><span class="g3-t"></span><span class="g3-sp"></span><button class="g3-b g3-fs" title="Vollbild">⛶</button><button class="g3-b g3-x" title="Beenden">✕</button></div>
-    <div class="g3-q"></div><div class="g3-toast"></div><div class="g3-help">← → ↑ ↓ oder WASD: laufen · Leertaste: springen</div><div class="g3-over"></div></div>`;
+    <div class="g3-q"></div><div class="g3-toast"></div><div class="g3-help">← → ↑ ↓ oder WASD: laufen · Leertaste: springen</div><div class="g3-stick"><i></i></div><button class="g3-jump" aria-label="Springen">⤒</button><div class="g3-over"></div></div>`;
   const root=host.querySelector('.g3'),hudP=root.querySelector('.g3-prog'),hudS=root.querySelector('.g3-sc'),hudT=root.querySelector('.g3-t'),qEl=root.querySelector('.g3-q'),toastEl=root.querySelector('.g3-toast'),over=root.querySelector('.g3-over');
   let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true});}catch(err){host.innerHTML='<p>3D (WebGL) ist auf diesem Gerät nicht verfügbar.</p>';return;}
   renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -1674,6 +1681,14 @@ function startParcours(host,page){
   const kd=e=>{if(typing())return;const r=root.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;const k=e.key.toLowerCase();
     if(['arrowleft','arrowright','arrowup','arrowdown',' ','a','d','w','s'].includes(k)){if(k===' '&&!keys[' '])P.jb=0.12;keys[k]=true;e.preventDefault();}};
   const ku=e=>{keys[e.key.toLowerCase()]=false;};addEventListener('keydown',kd);addEventListener('keyup',ku);
+  /* Touch (iPad): Joystick links, Sprungtaste rechts */
+  const stick=root.querySelector('.g3-stick'),knob=stick.firstChild,jumpB=root.querySelector('.g3-jump'),tv={x:0,z:0};let sid=null;
+  if(matchMedia('(any-pointer:coarse)').matches){root.classList.add('touch');root.querySelector('.g3-help').textContent='Joystick ziehen: laufen · ⤒: springen';}
+  const sMove=e=>{if(e.pointerId!==sid)return;e.preventDefault();const r=stick.getBoundingClientRect(),R=r.width/2;let dx=(e.clientX-r.left-R)/R,dz=(e.clientY-r.top-R)/R;const m=Math.hypot(dx,dz);
+    if(m>1){dx/=m;dz/=m;}if(m<0.15)tv.x=tv.z=0;else{tv.x=dx;tv.z=dz;}knob.style.transform=`translate(${dx*R*0.6}px,${dz*R*0.6}px)`;};
+  const sEnd=e=>{if(e.pointerId!==sid)return;sid=null;tv.x=tv.z=0;knob.style.transform='';};
+  stick.addEventListener('pointerdown',e=>{sid=e.pointerId;sMove(e);});stick.addEventListener('pointermove',sMove);stick.addEventListener('pointerup',sEnd);stick.addEventListener('pointercancel',sEnd);
+  const jEnd=()=>jumpB.classList.remove('on');jumpB.addEventListener('pointerdown',e=>{e.preventDefault();P.jb=0.12;jumpB.classList.add('on');});jumpB.addEventListener('pointerup',jEnd);jumpB.addEventListener('pointercancel',jEnd);
   root.querySelector('.g3-x').onclick=()=>stopParcours();
   root.querySelector('.g3-fs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():root.requestFullscreen?.();};
   /* Physik */
@@ -1700,7 +1715,7 @@ function startParcours(host,page){
   function step(dt){
     const w=root.clientWidth,h=root.clientHeight;if(renderer.domElement.width!==Math.round(w*renderer.getPixelRatio())){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
     let gdt=dt;if(hs>0){hs-=dt;gdt=dt*0.05;}elapsed+=dt;
-    if(!P.lock&&!done){const ix=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0),iz=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0),l=Math.hypot(ix,iz)||1,sp=6.5,k=Math.min(1,gdt*(P.gr?12:4));
+    if(!P.lock&&!done){const ix=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0)+tv.x,iz=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0)+tv.z,l=Math.max(1,Math.hypot(ix,iz)),sp=6.5,k=Math.min(1,gdt*(P.gr?12:4));
       P.knock=Math.max(0,(P.knock||0)-gdt);if(P.knock<=0){P.vel.x+=((ix/l)*sp-P.vel.x)*k;P.vel.z+=((iz/l)*sp-P.vel.z)*k;}
       P.coy=P.gr?0.1:Math.max(0,(P.coy||0)-gdt);P.jb=Math.max(0,(P.jb||0)-gdt);
       if(P.jb>0&&P.coy>0){P.vel.y=8.5;P.jb=0;P.coy=0;squash(1.15);}
